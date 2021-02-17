@@ -1,0 +1,31 @@
+## Pre-checks
+* Verified the load balancer SKU is Standard
+* Verified the Node type is VMSS
+* Verified cluster subnet has enough IPs available for another node with max pods
+* Get Pod and Deployment statuses and backup to file
+## Add new nodepool
+* Perform the command as instructed in https://docs.microsoft.com/en-us/azure/aks/use-system-pools#add-a-dedicated-system-node-pool-to-an-existing-aks-cluster
+  * Command: ```az aks nodepool add --cluster-name aks-sg01-sea-u-ipos01 -g rg-sg01-sea-u-ipos-aks01 --name agentpool1 --mode System --node-count 2 --node-vm-size Standard_D4s_v3 --kubernetes-version 1.18.14 --max-pods 30 --node-zones 1 2 3 -e --max-count 8 --min-count 2```
+## Change existed nodepool to User mode
+* Perform the command as instructed in https://docs.microsoft.com/en-us/azure/aks/use-system-pools#update-existing-cluster-system-and-user-node-pools
+  * Command: ```az aks nodepool update --cluster-name aks-sg01-sea-u-ipos01 -g rg-sg01-sea-u-ipos-aks01 -n agentpool --mode User```
+## Migrate application pods to new node pool
+* Unschedule nodes in old node pool
+  * Command: ```kubectl cordon $node```
+* Scale deployment to ensure pods running in new nodes
+  * Command: ```kubectl scale deployment $deployment-name --replicas=$number```
+* Check pod status with node allocation info
+  * Command: ```kubectl get pod -o wide```
+* Delete pods in old nodes
+  * Command: ```kubectl delete pod $pod-name```
+* Scale deployment back to normal replica number
+  * Command: ```kubectl scale deployment $deployment-name --replicas=$number```
+* Check pod status with node allocation info
+  * Command: ```kubectl get pod -o wide```
+* Verify application pods function
+## Delete the old node pool
+* Perform the command as instructed in https://docs.microsoft.com/en-us/azure/aks/use-system-pools#delete-a-system-node-pool
+* Command: ```az aks nodepool delete --cluster-name aks-sg01-sea-u-ipos01 -g rg-sg01-sea-u-ipos-aks01 -n agentpool```
+## Post-checks
+* Verified that k8s services are running
+* Verified that all pods statuses are similiar to statuses in your backup
